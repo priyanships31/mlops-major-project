@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Olivetti Face Recognizer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e0e0e0;
+    }
+
+    .container {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 40px;
+      width: 90%;
+      max-width: 520px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: #a78bfa; }
+    .subtitle { text-align: center; font-size: 0.9rem; color: #94a3b8; margin-bottom: 32px; }
+
+    .upload-area {
+      border: 2px dashed #a78bfa;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-bottom: 20px;
+    }
+    .upload-area:hover { background: rgba(167,139,250,0.1); }
+    .upload-area p { color: #94a3b8; font-size: 0.9rem; margin-top: 10px; }
+
+    #preview {
+      display: none;
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin: 12px auto 0;
+      border: 2px solid #a78bfa;
+    }
+
+    input[type="file"] { display: none; }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #result {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.07);
+      border-left: 4px solid #a78bfa;
+    }
+    #result h2 { font-size: 1rem; color: #a78bfa; margin-bottom: 10px; }
+    .result-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
+    .result-value { font-weight: 700; color: #f8fafc; }
+
+    #error {
+      display: none;
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.4);
+      color: #fca5a5;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🧠 Face Recognizer</h1>
+  <p class="subtitle">Olivetti Faces · DecisionTree Classifier</p>
+
+  <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+    <span style="font-size:2.5rem">📁</span>
+    <p>Click to upload a face image</p>
+    <p style="font-size:0.78rem">(64×64 greyscale recommended)</p>
+    <img id="preview" alt="preview"/>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)"/>
+
+  <button id="predictBtn" onclick="predict()" disabled>Predict Subject</button>
+
+  <div id="result">
+    <h2>Prediction Result</h2>
+    <div class="result-row">
+      <span>Predicted Subject ID</span>
+      <span class="result-value" id="resClass">—</span>
+    </div>
+    <div class="result-row">
+      <span>Confidence</span>
+      <span class="result-value" id="resConf">—</span>
+    </div>
+  </div>
+
+  <div id="error"></div>
+</div>
+
+<script>
+  let selectedFile = null;
+
+  function handleFile(e) {
+    selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const preview = document.getElementById('preview');
+      preview.src = ev.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(selectedFile);
+    document.getElementById('predictBtn').disabled = false;
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+  }
+
+  async function predict() {
+    if (!selectedFile) return;
+
+    const btn = document.getElementById('predictBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Predicting…';
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    try {
+      const resp = await fetch('/predict', { method: 'POST', body: formData });
+      const data = await resp.json();
+
+      if (data.error) throw new Error(data.error);
+
+      document.getElementById('resClass').textContent = `Subject #${data.predicted_class}`;
+      document.getElementById('resConf').textContent = data.confidence;
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('error').style.display = 'none';
+    } catch (err) {
+      const errDiv = document.getElementById('error');
+      errDiv.textContent = `Error: ${err.message}`;
+      errDiv.style.display = 'block';
+      document.getElementById('result').style.display = 'none';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Predict Subject';
+    }
+  }
+</script>
+</body>
+</html>

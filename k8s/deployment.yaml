@@ -1,0 +1,49 @@
+# k8s/deployment.yaml
+# Deploys 3 replicas of the Olivetti face-recogniser Flask app.
+# Replace YOUR_DOCKERHUB_USERNAME with your actual Docker Hub username.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: olivetti-face-recognizer
+  labels:
+    app: olivetti-face-recognizer
+spec:
+  replicas: 3                      # <-- Assignment requires 3 replicas always running
+  selector:
+    matchLabels:
+      app: olivetti-face-recognizer
+  template:
+    metadata:
+      labels:
+        app: olivetti-face-recognizer
+    spec:
+      containers:
+        - name: face-recognizer
+          image: YOUR_DOCKERHUB_USERNAME/olivetti-face-recognizer:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          # Resource limits (adjust as needed)
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          # Liveness probe — restarts the container if Flask stops responding
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            failureThreshold: 3
+          # Readiness probe — only sends traffic when the container is ready
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10

@@ -1,0 +1,20 @@
+# k8s/service.yaml
+# NodePort Service — exposes the Flask app on port 30007 of every cluster node.
+# Access via:  http://<NODE_IP>:30007
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: olivetti-face-recognizer-service
+  labels:
+    app: olivetti-face-recognizer
+spec:
+  type: NodePort
+  selector:
+    app: olivetti-face-recognizer
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80           # ClusterIP port (internal)
+      targetPort: 5000   # Container port (Flask)
+      nodePort: 30007    # External port on Node (range: 30000-32767)
