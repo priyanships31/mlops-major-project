@@ -16,6 +16,8 @@ spec:
       labels:
         app: olivetti-face-recognizer
     spec:
+      imagePullSecrets:
+        - name: regcred
       containers:
         - name: face-recognizer
           image: g25ai1035/olivetti-face-recognizer:latest
