@@ -49,9 +49,6 @@ mlops-major/
 
 ---
 
-## Model Details
-
----
 
 ## 🤖 Model Details
 
