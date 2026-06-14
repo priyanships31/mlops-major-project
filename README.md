@@ -9,8 +9,8 @@
 
 | Resource | URL |
 |----------|-----|
-| **GitHub Repository** | `https://github.com/<YOUR_USERNAME>/mlops-major` |
-| **Docker Hub Image** | `https://hub.docker.com/r/<YOUR_USERNAME>/olivetti-face-recognizer` |
+| **GitHub Repository** | `https://github.com/priyanships31/mlops-major-project` |
+| **Docker Hub Image**  | `https://hub.docker.com/r/g25ai1035/olivetti-face-recognizer` |
 
 ---
 
@@ -55,7 +55,7 @@ mlops-major/
 
 ```bash
 # Clone the repository
-git clone https://github.com/<YOUR_USERNAME>/mlops-major.git
+git clone https://github.com/priyanships31/mlops-major-project.git
 cd mlops-major
 
 # Verify branches
@@ -107,9 +107,9 @@ curl http://localhost:5000/health
 docker login
 
 docker tag olivetti-face-recognizer:latest \
-  <YOUR_DOCKERHUB_USERNAME>/olivetti-face-recognizer:latest
+  g25ai1035/olivetti-face-recognizer:latest
 
-docker push <YOUR_DOCKERHUB_USERNAME>/olivetti-face-recognizer:latest
+docker push g25ai1035/olivetti-face-recognizer:latest
 ```
 
 ### Step 5 — Kubernetes Deployment
