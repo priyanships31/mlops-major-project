@@ -49,174 +49,69 @@ mlops-major/
 
 ---
 
-## Step-by-Step Setup
-
-### Step 1 — Clone & Branch Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/priyanships31/mlops-major-project.git
-cd mlops-major
-
-# Verify branches
-git branch -a
-```
-
-### Step 2 — Dev Branch: Model Training & Testing
-
-```bash
-git checkout dev
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Train the model → produces savedmodel.pth
-python train.py
-
-# Evaluate the model → prints test accuracy
-python test.py
-```
-
-Expected output from `test.py`:
-```
-=============================================
-  Test Accuracy : ~65–75%
-=============================================
-```
-
-### Step 3 — Docker Branch: Build & Run Locally
-
-```bash
-git checkout docker_cicd
-
-# Build Docker image
-docker build -t olivetti-face-recognizer:latest .
-
-# Run container
-docker run -d -p 5000:5000 --name face-app olivetti-face-recognizer:latest
-
-# Verify health endpoint
-curl http://localhost:5000/health
-
-# Open browser → http://localhost:5000
-```
-
-### Step 4 — Push to Docker Hub
-
-```bash
-docker login
-
-docker tag olivetti-face-recognizer:latest \
-  g25ai1035/olivetti-face-recognizer:latest
-
-docker push g25ai1035/olivetti-face-recognizer:latest
-```
-
-### Step 5 — Kubernetes Deployment
-
-#### 5a. Update image name in deployment.yaml
-
-Edit `k8s/deployment.yaml` and replace `YOUR_DOCKERHUB_USERNAME` with your actual username.
-
-#### 5b. Apply manifests
-
-```bash
-# Apply Deployment (3 replicas)
-kubectl apply -f k8s/deployment.yaml
-
-# Apply NodePort Service
-kubectl apply -f k8s/service.yaml
-
-# Verify pods are running
-kubectl get pods
-```
-
-Expected output:
-```
-NAME                                        READY   STATUS    RESTARTS   AGE
-olivetti-face-recognizer-xxxxxxxxx-aaaaa    1/1     Running   0          30s
-olivetti-face-recognizer-xxxxxxxxx-bbbbb    1/1     Running   0          30s
-olivetti-face-recognizer-xxxxxxxxx-ccccc    1/1     Running   0          30s
-```
-
-#### 5c. Access the app
-
-```bash
-# Get Node IP (for local cluster use localhost or minikube ip)
-minikube ip      # e.g. 192.168.49.2
-
-# Open in browser
-http://<NODE_IP>:30007
-```
-
-#### 5d. Demonstrate self-healing (destroy a pod)
-
-```bash
-# List pods
-kubectl get pods
-
-# Delete one pod — Kubernetes automatically recreates it
-kubectl delete pod <POD_NAME>
-
-# Watch the replacement spin up immediately
-kubectl get pods -w
-```
-
-You will see the pod count stay at 3 as a new pod is scheduled.
+## Model Details
 
 ---
 
-## CI/CD Workflow (GitHub Actions)
+## 🤖 Model Details
 
-### Secrets Required
+| Parameter | Value |
+|-----------|-------|
+| Dataset | Olivetti Faces — 400 images, 40 subjects, 10 images each |
+| Image Size | 64×64 pixels (4096 features) |
+| Train / Test Split | 70% / 30% (stratified by subject) |
+| Algorithm | DecisionTreeClassifier (scikit-learn) |
+| Model File | savedmodel.pth (saved using joblib) |
+| Test Accuracy | 59.17% |
 
-Add these in **GitHub → Settings → Secrets and Variables → Actions**:
+The Olivetti Faces dataset contains greyscale face images of 40 different subjects. The DecisionTreeClassifier is trained to classify which subject a given image belongs to.
 
-| Secret Name | Value |
-|-------------|-------|
-| `DOCKERHUB_USERNAME` | Your Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token (not password) |
+---
+
+## ⚙️ CI/CD Workflow (GitHub Actions)
+
+The CI/CD pipeline is defined in `.github/workflows/ci.yml` and runs automatically on every push.
 
 ### Jobs
 
 | Job | Branch Trigger | What it Does |
 |-----|---------------|--------------|
-| `check_working_repo` | All branches | Installs deps → trains model → tests model |
-| `build_and_push_docker` | `docker_cicd` only | Builds Docker image → pushes to Docker Hub |
+| `check_working_repo` | All branches | Sets up Python → installs dependencies → trains model → tests model |
+| `build_and_push_docker` | `docker_cicd` only | Logs into Docker Hub → builds image → pushes to Docker Hub |
+
+### GitHub Secrets Required
+
+Go to **GitHub → Settings → Secrets and Variables → Actions** and add:
+
+| Secret Name | Value |
+|-------------|-------|
+| `DOCKERHUB_USERNAME` | g25ai1035 |
+| `DOCKERHUB_TOKEN` | Docker Hub access token |
 
 ---
 
-## Model Details
+## 🐳 Docker
 
-| Parameter | Value |
-|-----------|-------|
-| Dataset | Olivetti Faces (400 samples, 40 subjects) |
-| Features | 4096 (64×64 flattened pixels) |
-| Train / Test Split | 70% / 30% (stratified) |
-| Algorithm | DecisionTreeClassifier |
-| Serialisation | joblib (savedmodel.pth) |
+The application is containerized using a multi-stage Dockerfile. The first stage trains the model and saves it. The second stage copies the saved model and runs the Flask application.
 
----
+```bash
+# Build image
+docker build -t g25ai1035/olivetti-face-recognizer:latest .
 
-## Flask API Endpoints
+# Run locally
+docker run -d -p 5000:5000 --name face-app g25ai1035/olivetti-face-recognizer:latest
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Web UI for image upload |
-| `/predict` | POST | Accepts `multipart/form-data` with `image` field; returns JSON prediction |
-| `/health` | GET | Health check — returns `{"status": "healthy"}` |
-
-### Example `/predict` response
-
-```json
-{
-  "predicted_class": 12,
-  "confidence": "82.35%",
-  "message": "Predicted Subject ID: 12"
-}
+# Push to Docker Hub
+docker login
+docker push g25ai1035/olivetti-face-recognizer:latest
 ```
 
 ---
+
+## ☸️ Kubernetes Deployment
+
+The app is deployed on Minikube with 3 replicas using a NodePort service on port 30007.
+
 
 ## Kubernetes Architecture
 
@@ -235,15 +130,29 @@ Service (ClusterIP :80)
           └── savedmodel.pth (baked into image)
 ```
 
-The Deployment spec sets `replicas: 3`. If any pod is deleted or crashes, the ReplicaSet controller automatically schedules a replacement, maintaining exactly 3 running instances at all times.
+3 replicas always running. If a pod is deleted, Kubernetes auto-creates a replacement.
 
 ---
 
-## Troubleshooting
+## Quick Commands
 
-| Issue | Fix |
-|-------|-----|
-| `savedmodel.pth not found` | Run `python train.py` first |
-| Docker build fails on model step | Ensure Python deps install correctly in the builder stage |
-| Kubernetes pods in `ImagePullBackOff` | Check that the image name in `deployment.yaml` matches your Docker Hub repo |
-| NodePort not reachable | Run `minikube service olivetti-face-recognizer-service --url` for the correct URL |
+```bash
+# Dev branch
+git checkout dev
+python3 train.py
+python3 test.py
+
+# Docker
+docker build -t g25ai1035/olivetti-face-recognizer:latest .
+docker push g25ai1035/olivetti-face-recognizer:latest
+
+# Kubernetes
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl get pods
+minikube service olivetti-face-recognizer-service --url
+
+# Self healing demo
+kubectl delete pod <POD_NAME>
+kubectl get pods -w
+```
