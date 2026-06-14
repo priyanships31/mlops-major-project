@@ -132,6 +132,45 @@ Service (ClusterIP :80)
 
 3 replicas always running. If a pod is deleted, Kubernetes auto-creates a replacement.
 
+## 🔄 Kubernetes Self-Healing
+
+This project demonstrates Kubernetes **self-healing**, where the desired state of the application is automatically maintained.
+
+* The deployment is configured with **3 replicas**.
+* When one pod is manually deleted using:
+
+  ```bash
+  kubectl delete pod <POD_NAME>
+  ```
+
+  Kubernetes immediately detects that the number of running replicas has dropped below the desired count.
+* The Deployment controller automatically creates a **new replacement pod** without any manual intervention.
+* The status can be monitored using:
+
+  ```bash
+  kubectl get pods -w
+  ```
+* After a short time, the cluster returns to **3 running pods**, demonstrating Kubernetes' fault tolerance and self-healing capability.
+
+**Workflow:**
+
+```
+3 Running Pods
+       │
+       ▼
+Delete One Pod
+       │
+       ▼
+Kubernetes Detects Missing Replica
+       │
+       ▼
+Creates New Pod Automatically
+       │
+       ▼
+3 Running Pods Restored
+```
+
+
 ---
 
 ## Quick Commands
