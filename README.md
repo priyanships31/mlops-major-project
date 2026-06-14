@@ -1,6 +1,6 @@
 # End-to-End MLOps Pipeline — Olivetti Face Recognizer
 
-> **MLOps Major Assignment** | PGD May 2026  
+> **MLOps Major Assignment** 
 > Dataset: Olivetti Faces (sklearn) | Model: DecisionTreeClassifier
 
 ---
